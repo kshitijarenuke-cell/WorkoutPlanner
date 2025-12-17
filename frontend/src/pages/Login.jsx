@@ -21,6 +21,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      // Assuming 'login' function in AuthContext already uses VITE_API_URL internally
       const userData = await login(email, password);
       await checkOnboarding(userData);
     } catch (err) {
@@ -34,14 +35,18 @@ const Login = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      const res = await axios.post("/api/users/google-login", {
+      // ✅ FIX: Added `${import.meta.env.VITE_API_URL}` to direct traffic to the Backend
+      // This prevents the 404 error by pointing to https://workoutplanner-backend.onrender.com
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/users/google-login`, {
         token: credentialResponse.credential,
       });
 
       const userData = res.data;
       localStorage.setItem("user", JSON.stringify(userData));
-      // Update AuthContext so the app immediately knows the user (important for Google Login)
+      
+      // Update AuthContext so the app immediately knows the user
       if (typeof setUser === "function") setUser(userData);
+      
       await checkOnboarding(userData);
 
     } catch (err) {
@@ -53,8 +58,7 @@ const Login = () => {
   };
 
   const checkOnboarding = async (user) => {
-    // Only route to onboarding for newly created accounts (explicit signal from backend).
-    // All other users (existing accounts in DB) should go straight to dashboard.
+    // Only route to onboarding for newly created accounts
     if (user?.isNewUser) {
       navigate("/onboarding");
     } else {
