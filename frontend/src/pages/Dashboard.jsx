@@ -14,14 +14,15 @@ const BADGES = [
 ];
 
 const Dashboard = () => {
+  // ✅ Initialize with empty arrays to prevent crashes
   const [schedules, setSchedules] = useState([]);
   const [workouts, setWorkouts] = useState([]);
+  
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
   const token = user ? user.token : null;
   
-
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   // Helper to get local date YYYY-MM-DD
@@ -37,13 +38,19 @@ const Dashboard = () => {
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
-      const workoutRes = await axios.get("/api/workouts", config);
-      setWorkouts(workoutRes.data);
+      // ✅ Use environment variable for backend URL
+      const workoutRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts`, config);
+      // ✅ Safety check: Ensure data is an array
+      setWorkouts(Array.isArray(workoutRes.data) ? workoutRes.data : []);
 
-      const scheduleRes = await axios.get("/api/workouts/schedule", config);
-      setSchedules(scheduleRes.data);
+      const scheduleRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts/schedule`, config);
+      // ✅ Safety check: Ensure data is an array
+      setSchedules(Array.isArray(scheduleRes.data) ? scheduleRes.data : []);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching dashboard data:", err);
+      // Optional: Set empty arrays on error to be safe
+      setWorkouts([]);
+      setSchedules([]);
     }
   }, [token]);
 
@@ -57,12 +64,15 @@ const Dashboard = () => {
 
   const handleComplete = async (scheduleId) => {
     try {
+      // Optimistic UI Update
       setSchedules((prev) =>
         prev.map((s) => (s._id === scheduleId ? { ...s, isCompleted: true } : s))
       );
-      await axios.put(`/api/workouts/schedule/${scheduleId}`, {}, config);
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, {}, config);
+      // Refresh to ensure sync
       await fetchData();
-    } catch {
+    } catch (err) {
+      console.error("Error updating status:", err);
       alert("Error updating status");
     }
   };
@@ -70,18 +80,20 @@ const Dashboard = () => {
   const handleDelete = async (scheduleId) => {
     if (!window.confirm("Delete this schedule?")) return;
     try {
-      const res = await axios.delete(`/api/workouts/schedule/${scheduleId}`, config);
-      console.debug("Delete response:", res.status, res.data);
-      // Refresh schedules after deletion to ensure UI is in sync
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, config);
+      // Refresh schedules after deletion
       await fetchData();
-    } catch {
-      alert("Error deleting schedule. Check console for details.");
-      console.error("Failed to delete schedule", scheduleId);
+    } catch (err) {
+      console.error("Failed to delete schedule", err);
+      alert("Error deleting schedule.");
     }
   };
 
   // --- BADGE LOGIC ---
   const calculateBadges = () => {
+    // ✅ Safety check before filtering
+    if (!Array.isArray(schedules)) return BADGES;
+
     const completedSchedules = schedules.filter(s => s.isCompleted);
     const totalCompleted = completedSchedules.length;
 
@@ -119,7 +131,9 @@ const Dashboard = () => {
   const myBadges = calculateBadges();
   
   // LOGIC: Find Today's Workout
-  const allTodaysWorkouts = schedules.filter((s) => s.date.startsWith(todayStr));
+  // ✅ Safety check: Ensure schedules is an array before filtering
+  const safeSchedules = Array.isArray(schedules) ? schedules : [];
+  const allTodaysWorkouts = safeSchedules.filter((s) => s.date.startsWith(todayStr));
   const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted) || allTodaysWorkouts[0];
 
   return (
@@ -133,7 +147,7 @@ const Dashboard = () => {
 
       {/* STATS */}
       <div style={{ marginBottom: "40px" }}>
-        <StatsSummary schedules={schedules} />
+        <StatsSummary schedules={safeSchedules} />
       </div>
 
       {/* BADGES */}
@@ -166,7 +180,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* 🔥 TODAY'S MISSION CARD (UPDATED) */}
+      {/* 🔥 TODAY'S MISSION CARD */}
       <div className="card" style={{ border: "2px solid var(--primary)", borderRadius: "16px", padding: "25px", marginBottom: "40px" }}>
         <h2 style={{ marginTop: 0 }}>🔥 Today’s Mission</h2>
         
@@ -211,11 +225,19 @@ const Dashboard = () => {
 
       {/* CHARTS */}
       <div className="charts-grid" style={{ marginBottom: "40px", alignItems: "stretch" }}>
-        <div className="card" style={{ padding: "20px", borderRadius: "16px" }}>
-          <WorkoutChart schedules={schedules} />
+        <div className="card" style={{ padding: "20px", borderRadius: "16px", minHeight: "350px" }}>
+          <h3 style={{marginBottom: "20px"}}>Workout Frequency</h3>
+          {/* ✅ Fixed height container for Chart */}
+          <div style={{ height: "300px", width: "100%" }}>
+            <WorkoutChart schedules={safeSchedules} />
+          </div>
         </div>
-        <div className="card" style={{ padding: "20px", borderRadius: "16px" }}>
-          <WorkoutPieChart schedules={schedules} />
+        <div className="card" style={{ padding: "20px", borderRadius: "16px", minHeight: "350px" }}>
+          <h3 style={{marginBottom: "20px"}}>Workout Types</h3>
+           {/* ✅ Fixed height container for Chart */}
+           <div style={{ height: "300px", width: "100%" }}>
+            <WorkoutPieChart schedules={safeSchedules} />
+          </div>
         </div>
       </div>
 
@@ -223,7 +245,8 @@ const Dashboard = () => {
       <div className="card" style={{ padding: "25px", borderRadius: "16px" }}>
         <h3 style={{ margin: "0 0 25px 0", borderBottom: "1px solid #eee", paddingBottom: "15px", fontSize: "1.2rem" }}>📅 Upcoming Schedule</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-          {schedules.filter(s => s.date > todayStr).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((s) => (
+          {/* ✅ Filter safely */}
+          {safeSchedules.filter(s => s.date > todayStr).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((s) => (
               <div key={s._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "#F9FAFB", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
                 <div>
                   <div style={{ fontSize: "0.85rem", color: "#6B7280", fontWeight: "600", marginBottom: "6px", textTransform: "uppercase" }}>
@@ -239,7 +262,8 @@ const Dashboard = () => {
                 </div>
               </div>
           ))}
-          {schedules.filter(s => s.date > todayStr).length === 0 && (
+          {/* ✅ Check length safely */}
+          {safeSchedules.filter(s => s.date > todayStr).length === 0 && (
             <div style={{ textAlign: "center", padding: "30px", color: "#9CA3AF" }}>No upcoming workouts scheduled.</div>
           )}
         </div>
