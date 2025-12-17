@@ -1,0 +1,26 @@
+# --- Dependencies ---
+node_modules
+package-lock.json
+yarn.lock
+
+# --- Build Outputs ---
+dist
+build
+dist-ssr
+
+# --- Environment Variables (Secrets) ---
+.env
+.env.local
+.env.*
+
+# --- Logs ---
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# --- Editor/OS Files ---
+.vscode
+.idea
+.DS_Store
+*.swp

@@ -1,0 +1,251 @@
+import { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import { Link, useNavigate } from "react-router-dom"; 
+
+import StatsSummary from "../components/StatsSummary";
+import WorkoutChart from "../components/WorkoutChart";
+import WorkoutPieChart from "../components/WorkoutPieChart";
+
+const BADGES = [
+  { id: 1, name: "First Step", icon: "👟", desc: "Complete your first workout", type: "count", threshold: 1 },
+  { id: 2, name: "On Fire", icon: "🔥", desc: "Achieve a 3-day streak", type: "streak", threshold: 3 },
+  { id: 3, name: "Iron Will", icon: "💪", desc: "Complete 10 total workouts", type: "count", threshold: 10 },
+  { id: 4, name: "Weekend Warrior", icon: "🌴", desc: "Workout on a Saturday or Sunday", type: "special" },
+];
+
+const Dashboard = () => {
+  const [schedules, setSchedules] = useState([]);
+  const [workouts, setWorkouts] = useState([]);
+  const navigate = useNavigate();
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = user ? user.token : null;
+  
+
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+
+  // Helper to get local date YYYY-MM-DD
+  const getTodayString = () => {
+    const date = new Date();
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60000);
+    return localDate.toISOString().split("T")[0];
+  };
+
+  const todayStr = getTodayString();
+
+  const fetchData = useCallback(async () => {
+    if (!token) return;
+    try {
+      const workoutRes = await axios.get("/api/workouts", config);
+      setWorkouts(workoutRes.data);
+
+      const scheduleRes = await axios.get("/api/workouts/schedule", config);
+      setSchedules(scheduleRes.data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    fetchData();
+  }, [token, navigate, fetchData]);
+
+  const handleComplete = async (scheduleId) => {
+    try {
+      setSchedules((prev) =>
+        prev.map((s) => (s._id === scheduleId ? { ...s, isCompleted: true } : s))
+      );
+      await axios.put(`/api/workouts/schedule/${scheduleId}`, {}, config);
+      await fetchData();
+    } catch {
+      alert("Error updating status");
+    }
+  };
+
+  const handleDelete = async (scheduleId) => {
+    if (!window.confirm("Delete this schedule?")) return;
+    try {
+      const res = await axios.delete(`/api/workouts/schedule/${scheduleId}`, config);
+      console.debug("Delete response:", res.status, res.data);
+      // Refresh schedules after deletion to ensure UI is in sync
+      await fetchData();
+    } catch {
+      alert("Error deleting schedule. Check console for details.");
+      console.error("Failed to delete schedule", scheduleId);
+    }
+  };
+
+  // --- BADGE LOGIC ---
+  const calculateBadges = () => {
+    const completedSchedules = schedules.filter(s => s.isCompleted);
+    const totalCompleted = completedSchedules.length;
+
+    let streakCount = 0;
+    let lastDate = null;
+    const datesAsc = [...new Set(completedSchedules.map(s => s.date))].sort();
+    
+    datesAsc.forEach(dateStr => {
+        const d = new Date(dateStr);
+        if (!lastDate) {
+            streakCount = 1;
+        } else {
+            const diffTime = Math.abs(d - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            if (diffDays === 1) streakCount++;
+            else if (diffDays > 1) streakCount = 1;
+        }
+        lastDate = d;
+    });
+
+    const hasWeekend = completedSchedules.some(s => {
+        const day = new Date(s.date).getDay();
+        return day === 0 || day === 6;
+    });
+
+    return BADGES.map(badge => {
+        let isUnlocked = false;
+        if (badge.type === "count") isUnlocked = totalCompleted >= badge.threshold;
+        if (badge.type === "streak") isUnlocked = streakCount >= badge.threshold;
+        if (badge.type === "special") isUnlocked = hasWeekend;
+        return { ...badge, isUnlocked };
+    });
+  };
+
+  const myBadges = calculateBadges();
+  
+  // LOGIC: Find Today's Workout
+  const allTodaysWorkouts = schedules.filter((s) => s.date.startsWith(todayStr));
+  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted) || allTodaysWorkouts[0];
+
+  return (
+    <div className="container" style={{ paddingBottom: "100px" }}>
+      
+      {/* HEADER */}
+      <div style={{ marginBottom: "30px" }}>
+        <h1>Welcome back, {user?.name?.split(" ")[0] || ''}!</h1>
+        <p style={{ color: "#6B7280" }}>Here is your daily activity summary.</p>
+      </div>
+
+      {/* STATS */}
+      <div style={{ marginBottom: "40px" }}>
+        <StatsSummary schedules={schedules} />
+      </div>
+
+      {/* BADGES */}
+      <div className="card" style={{ padding: "25px", borderRadius: "16px", marginBottom: "40px" }}>
+        <h3 style={{ margin: "0 0 20px 0", fontSize: "1.2rem" }}>🏆 Your Achievements</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+            {myBadges.map((badge) => (
+                <div key={badge.id} style={{
+                    border: badge.isUnlocked ? "2px solid #FCD34D" : "1px solid #E5E7EB",
+                    background: badge.isUnlocked ? "#FFFBEB" : "#F9FAFB",
+                    borderRadius: "12px",
+                    padding: "15px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "15px",
+                    opacity: badge.isUnlocked ? 1 : 0.6
+                }}>
+                    <div style={{ fontSize: "2rem", filter: badge.isUnlocked ? "none" : "grayscale(100%)" }}>
+                        {badge.icon}
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: "bold", color: badge.isUnlocked ? "#92400E" : "#6B7280" }}>
+                            {badge.name}
+                        </div>
+                        <div style={{ fontSize: "0.8rem", color: "#6B7280" }}>{badge.desc}</div>
+                    </div>
+                    {badge.isUnlocked && <div style={{ marginLeft: "auto", color: "#F59E0B" }}>✔</div>}
+                </div>
+            ))}
+        </div>
+      </div>
+
+      {/* 🔥 TODAY'S MISSION CARD (UPDATED) */}
+      <div className="card" style={{ border: "2px solid var(--primary)", borderRadius: "16px", padding: "25px", marginBottom: "40px" }}>
+        <h2 style={{ marginTop: 0 }}>🔥 Today’s Mission</h2>
+        
+        {todaysWorkout ? (
+          // IF WORKOUT EXISTS
+          todaysWorkout.isCompleted ? (
+            <div style={{ background: "#D1FAE5", padding: "20px", borderRadius: "12px", textAlign: "center", fontWeight: "bold", color: "#065F46" }}>
+              ✅ Workout Completed!
+            </div>
+          ) : (
+            // IF PENDING
+            <>
+              <h3 style={{ color: "var(--primary)" }}>{todaysWorkout.workout.name}</h3>
+              <div style={{ background: "#384b71ff", padding: "20px", borderRadius: "12px", marginBottom: "20px" }}>
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                  {todaysWorkout.workout.exercises.map((ex, i) => (
+                    <li key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: i !== todaysWorkout.workout.exercises.length - 1 ? "1px solid #E5E7EB" : "none" }}>
+                      <strong style={{color: "white"}}>{ex.name}</strong>
+                      <span style={{color: "#D1D5DB"}}>{ex.sets} x {ex.reps}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <button onClick={() => handleComplete(todaysWorkout._id)} style={{ width: "100%", padding: "14px", background: "var(--primary)", color: "#fff", border: "none", borderRadius: "8px", fontWeight: "bold", cursor: "pointer" }}>
+                Mark as Completed
+              </button>
+            </>
+          )
+        ) : (
+          // IF NO WORKOUT (Empty State)
+          <div style={{ textAlign: "center", padding: "10px 0" }}>
+            <p style={{ color: "#6B7280", fontSize: "1.1rem", marginBottom: "10px" }}>
+              Rest day! No workout scheduled for today.
+            </p>
+            {/* CLICKABLE LINK */}
+            <Link to="/create" style={{ color: "var(--primary)", fontWeight: "700", textDecoration: "underline", fontSize: "1.05rem", cursor: "pointer" }}>
+              Schedule now?
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* CHARTS */}
+      <div className="charts-grid" style={{ marginBottom: "40px", alignItems: "stretch" }}>
+        <div className="card" style={{ padding: "20px", borderRadius: "16px" }}>
+          <WorkoutChart schedules={schedules} />
+        </div>
+        <div className="card" style={{ padding: "20px", borderRadius: "16px" }}>
+          <WorkoutPieChart schedules={schedules} />
+        </div>
+      </div>
+
+      {/* UPCOMING */}
+      <div className="card" style={{ padding: "25px", borderRadius: "16px" }}>
+        <h3 style={{ margin: "0 0 25px 0", borderBottom: "1px solid #eee", paddingBottom: "15px", fontSize: "1.2rem" }}>📅 Upcoming Schedule</h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          {schedules.filter(s => s.date > todayStr).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((s) => (
+              <div key={s._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "#F9FAFB", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                <div>
+                  <div style={{ fontSize: "0.85rem", color: "#6B7280", fontWeight: "600", marginBottom: "6px", textTransform: "uppercase" }}>
+                    {new Date(s.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </div>
+                  <div style={{ color: "#1F2937", fontWeight: "bold", fontSize: "1.1rem" }}>{s.workout.name}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ padding: "6px 12px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "bold", background: s.isCompleted ? "#D1FAE5" : "#FEF3C7", color: s.isCompleted ? "#065F46" : "#92400E", border: s.isCompleted ? "1px solid #10B981" : "1px solid #F59E0B" }}>
+                      {s.isCompleted ? "Done" : "Pending"}
+                  </span>
+                  <button onClick={() => handleDelete(s._id)} style={{ background: "white", border: "1px solid #EF4444", color: "#EF4444", padding: "8px 12px", borderRadius: "8px", cursor: "pointer" }}>🗑️</button>
+                </div>
+              </div>
+          ))}
+          {schedules.filter(s => s.date > todayStr).length === 0 && (
+            <div style={{ textAlign: "center", padding: "30px", color: "#9CA3AF" }}>No upcoming workouts scheduled.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;

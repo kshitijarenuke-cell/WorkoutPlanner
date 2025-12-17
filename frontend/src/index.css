@@ -1,0 +1,190 @@
+/* --- 1. GLOBAL VARIABLES & RESET --- */
+:root {
+  --bg-main: #F3F4F6;       /* Light Grey */
+  --bg-card: #FFFFFF;       /* Pure White */
+  --text-primary: #111827;  /* Black */
+  --text-secondary: #6B7280;/* Grey */
+  --primary: #3B82F6;       /* Blue */
+  --border: #E5E7EB;
+  --input-bg: #FFFFFF;
+  --dropdown-hover: #F3F4F6;
+
+  /* Responsive Breakpoints (mobile-first) */
+  --bp-sm: 640px;   /* small devices / large phones */
+  --bp-md: 900px;   /* tablets */
+  --bp-lg: 1200px;  /* desktop */
+}
+
+/* DARK MODE PALETTE */
+body.dark-mode {
+  --bg-main: #111827;       /* Deep Navy (Background) */
+  --bg-card: #1F293B;       /* Lighter Navy (Cards) - VISIBLE CONTRAST */
+  --text-primary: #F9FAFB;  /* Bright White */
+  --text-secondary: #9CA3AF;/* Light Grey */
+  --primary: #60A5FA;       /* Lighter Blue for dark mode */
+  --border: #374151;
+  --input-bg: #374151;      /* Dark input background */
+  --dropdown-hover: #374151;
+}
+
+/* Scalable typography */
+html {
+  font-size: 16px;
+}
+
+h1 { font-size: clamp(1.4rem, 2.5vw, 2rem); }
+h2 { font-size: clamp(1.2rem, 2.0vw, 1.6rem); }
+h3 { font-size: clamp(1.05rem, 1.6vw, 1.2rem); }
+
+/* Page container (mobile-first) */
+.container {
+  max-width: 100%;
+  padding: 16px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (min-width: var(--bp-sm)) {
+  .container { max-width: 720px; padding: 20px; }
+}
+@media (min-width: var(--bp-md)) {
+  .container { max-width: 1100px; padding: 24px; }
+}
+
+/* Responsive cards */
+.card { padding: 16px; border-radius: 12px; }
+@media (min-width: var(--bp-sm)) { .card { padding: 20px; } }
+
+/* Navbar responsiveness */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.nav-links { display: flex; gap: 18px; align-items: center; }
+.nav-mobile-toggle { display: none; background: transparent; border: none; font-size: 1.3rem; }
+
+@media (max-width: calc(var(--bp-sm) - 1px)) {
+  .nav-links { display: none; }
+  .nav-mobile-toggle { display: inline-flex; }
+}
+
+/* Mobile menu overlay */
+.mobile-menu { position: absolute; top: 60px; right: 16px; left: 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); z-index: 2000; }
+
+/* Charts/grid responsive tweak */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+
+/* Calendar layout stacks on mobile */
+.calendar-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+@media (min-width: var(--bp-md)) {
+  .calendar-layout { grid-template-columns: 1.2fr 1fr; }
+}
+
+/* Utility: responsive spacing for full-width sections */
+.full-width { width: 100%; box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: all 0.3s ease;
+}
+
+/* --- 2. COMPONENT STYLES --- */
+
+/* Cards */
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Inputs (Fixing Invisible Text) */
+input, select, textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Make images responsive by default */
+img { max-width: 100%; height: auto; display: block; }
+
+/* --- 3. DROPDOWN MENU STYLING (Fixing Alignment) --- */
+.dropdown-menu {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dropdown-item {
+  display: flex !important;
+  align-items: center;
+  width: 100%;
+  padding: 12px 20px !important;
+  color: var(--text-primary) !important;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
+.dropdown-item:hover {
+  background-color: var(--dropdown-hover) !important;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* --- 4. AI COACH SPACING --- */
+/* Fixes the "Touching Border" issue */
+.ai-coach-container {
+  max-width: 600px;
+  margin: 20px auto; /* Adds spacing from top/bottom */
+  padding: 0 16px;   /* Adds spacing from sides on mobile */
+  height: auto; /* Let content determine height on small screens */
+}
+
+@media (min-width: var(--bp-md)) {
+  .ai-coach-container { padding: 0; height: calc(100vh - 100px); }
+}
+/* --- INPUT GROUPS (Icons inside inputs) --- */
+.input-group {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  pointer-events: none; /* Let clicks pass through */
+}
+
+/* Add padding to input so text doesn't hit the icon */
+.input-with-icon {
+  padding-left: 45px !important; 
+}
+
+/* Smooth Links */
+.auth-link {
+  color: var(--primary);
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.auth-link:hover {
+  text-decoration: underline;
+  color: var(--primary-hover);
+}
