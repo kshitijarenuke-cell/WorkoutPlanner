@@ -22,14 +22,9 @@ app.use('/api/workouts', workoutRoutes); // 👈 This creates '/api/workouts'
 startScheduler();
 
 // Serve static assets if in production
-if (process.env.NODE_ENV === 'production') {
-  // Set static folder
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-  app.get(/(.*)/, (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
-  });
-}
-
+// ✅ PASTE THIS INSTEAD:
+app.get('/', (req, res) => {
+    res.send('API is running successfully');
+});
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
