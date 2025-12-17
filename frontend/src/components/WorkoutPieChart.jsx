@@ -2,8 +2,11 @@ import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const WorkoutPieChart = ({ schedules }) => {
+  // Safety check
+  const safeSchedules = Array.isArray(schedules) ? schedules : [];
+
   // 1. Filter only completed workouts
-  const completed = schedules.filter(s => s.completed);
+  const completed = safeSchedules.filter(s => s.isCompleted || s.completed);
 
   // 2. Group by Type (Strength, Cardio, etc.)
   // Result looks like: { "Strength": 5, "Cardio": 2 }

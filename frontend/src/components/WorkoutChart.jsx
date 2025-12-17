@@ -2,6 +2,9 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const WorkoutChart = ({ schedules }) => {
+  // Safety check
+  const safeSchedules = Array.isArray(schedules) ? schedules : [];
+
   // --- 1. RESTORED LOGIC START ---
   
   // Helper to get the last 7 days
@@ -19,8 +22,8 @@ const WorkoutChart = ({ schedules }) => {
   const last7Days = getLast7Days();
   
   const chartData = last7Days.map(date => {
-    const count = schedules.filter(s => 
-      s.date.startsWith(date) && s.completed
+    const count = safeSchedules.filter(s => 
+      s.date.startsWith(date) && (s.isCompleted || s.completed)
     ).length;
 
     const displayDate = date.substring(5); // e.g., "12-10"

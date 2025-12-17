@@ -1,8 +1,11 @@
 import React from 'react';
 
 const StatsSummary = ({ schedules }) => {
+  // Safety check
+  const safeSchedules = Array.isArray(schedules) ? schedules : [];
+
   // 1. Filter only completed workouts
-  const completedWorkouts = schedules.filter(s => s.completed);
+  const completedWorkouts = safeSchedules.filter(s => s.isCompleted || s.completed);
 
   // 2. Calculate Total Workouts
   const totalCompleted = completedWorkouts.length;

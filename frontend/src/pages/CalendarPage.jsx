@@ -32,8 +32,8 @@ const CalendarPage = () => {
         axios.get("/api/workouts/schedule", config),
         axios.get("/api/workouts", config)
       ]);
-      setSchedules(schRes.data);
-      setWorkouts(workRes.data);
+      setSchedules(Array.isArray(schRes.data) ? schRes.data : []);
+      setWorkouts(Array.isArray(workRes.data) ? workRes.data : []);
     } catch (err) {
       console.error(err);
     }
@@ -82,7 +82,7 @@ const CalendarPage = () => {
     if (view === 'month') {
       const dStr = formatDate(date);
       const hasWorkout = schedules.some(s => s.date.startsWith(dStr));
-      const isCompleted = schedules.some(s => s.date.startsWith(dStr) && s.completed);
+      const isCompleted = schedules.some(s => s.date.startsWith(dStr) && (s.isCompleted || s.completed));
       
       if (hasWorkout) {
         return (
@@ -134,11 +134,11 @@ const CalendarPage = () => {
           {daysWorkouts.length > 0 ? (
             daysWorkouts.map(s => (
               <div key={s._id} style={{ 
-                background: s.completed ? "#ECFDF5" : "#EFF6FF", 
+                background: (s.isCompleted || s.completed) ? "#ECFDF5" : "#EFF6FF", 
                 padding: "20px", 
                 borderRadius: "12px", 
                 marginBottom: "15px",
-                borderLeft: `5px solid ${s.completed ? "#10B981" : "#3B82F6"}`
+                borderLeft: `5px solid ${(s.isCompleted || s.completed) ? "#10B981" : "#3B82F6"}`
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                   <div>
@@ -147,7 +147,7 @@ const CalendarPage = () => {
                   </div>
                   
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "5px" }}>
-                    {s.completed && <span style={{ color: "#059669", fontWeight: "bold", fontSize: "0.8rem" }}>✅ COMPLETED</span>}
+                    {(s.isCompleted || s.completed) && <span style={{ color: "#059669", fontWeight: "bold", fontSize: "0.8rem" }}>✅ COMPLETED</span>}
                     
                     {/* --- NEW BUTTON: Add to Google Calendar --- */}
                     
