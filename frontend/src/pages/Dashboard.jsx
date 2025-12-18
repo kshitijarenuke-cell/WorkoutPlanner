@@ -14,28 +14,27 @@ const BADGES = [
 ];
 
 const Dashboard = () => {
-  // 1. Initialize State
   const [schedules, setSchedules] = useState([]);
   const [workouts, setWorkouts] = useState([]);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
   const token = user ? user.token : null;
-  
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
-  // 2. Fetch Data
+  // 1. FETCH DATA (Added timestamp `?t=` to force fresh data every time)
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
-      const workoutRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts`, config);
+      const timestamp = new Date().getTime(); // Unique number
+      
+      const workoutRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts?t=${timestamp}`, config);
       setWorkouts(Array.isArray(workoutRes.data) ? workoutRes.data : []);
 
-      const scheduleRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts/schedule`, config);
+      const scheduleRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts/schedule?t=${timestamp}`, config);
       setSchedules(Array.isArray(scheduleRes.data) ? scheduleRes.data : []);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-      // Prevent crash by setting empty arrays on error
       setWorkouts([]);
       setSchedules([]);
     }
@@ -49,15 +48,14 @@ const Dashboard = () => {
     fetchData();
   }, [token, navigate, fetchData]);
 
-  // 3. Handlers
+  // 2. HANDLERS
   const handleComplete = async (scheduleId) => {
     try {
-      // Optimistic update for instant UI feedback
       setSchedules((prev) =>
         prev.map((s) => (s._id === scheduleId ? { ...s, isCompleted: true } : s))
       );
       await axios.put(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, {}, config);
-      await fetchData(); // Refresh data to be sure
+      await fetchData(); 
     } catch (err) {
       console.error("Error updating status:", err);
       alert("Error updating status");
@@ -75,17 +73,14 @@ const Dashboard = () => {
     }
   };
 
-  // 4. BADGE LOGIC (Restored from missing code)
+  // 3. BADGE LOGIC
   const calculateBadges = () => {
     if (!Array.isArray(schedules)) return BADGES;
-
     const completedSchedules = schedules.filter(s => s.isCompleted);
     const totalCompleted = completedSchedules.length;
 
-    // Streak Logic
     let streakCount = 0;
     let lastDate = null;
-    // Sort completed dates to find streaks
     const datesAsc = [...new Set(completedSchedules.map(s => s.date))].sort();
     
     datesAsc.forEach(dateStr => {
@@ -96,14 +91,14 @@ const Dashboard = () => {
             const diffTime = Math.abs(d - lastDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
             if (diffDays === 1) streakCount++;
-            else if (diffDays > 1) streakCount = 1; // Reset if gap > 1 day
+            else if (diffDays > 1) streakCount = 1; 
         }
         lastDate = d;
     });
 
     const hasWeekend = completedSchedules.some(s => {
         const day = new Date(s.date).getDay();
-        return day === 0 || day === 6; // 0=Sun, 6=Sat
+        return day === 0 || day === 6; 
     });
 
     return BADGES.map(badge => {
@@ -117,32 +112,31 @@ const Dashboard = () => {
 
   const myBadges = calculateBadges();
   
-  // 5. DATE HELPER (Fixes "Today" not showing issue)
-  const getTodayString = () => {
-    const date = new Date();
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - offset * 60000);
-    return localDate.toISOString().split("T")[0];
-  };
-
-  const todayStr = getTodayString();
-
+  // 4. DATE LOGIC FIX
   const safeSchedules = Array.isArray(schedules) ? schedules : [];
   
-  // Find today's workout using string comparison (YYYY-MM-DD)
-  // This avoids timezone shifts causing "off by one day" errors
-  const allTodaysWorkouts = safeSchedules.filter((s) => {
-    if (!s.date) return false;
-    return s.date.split('T')[0] === todayStr;
-  });
-  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted && !s.completed) || allTodaysWorkouts[0];
+  // Get Local "Today" as YYYY-MM-DD
+  const getLocalToday = () => {
+    const d = new Date();
+    // Adjust for timezone offset to get strictly local YYYY-MM-DD
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  };
 
-  // Helper for upcoming (Strictly future dates)
+  const todayStr = getLocalToday();
+
+  // Helper to safely extract YYYY-MM-DD from schedule date
+  const getScheduleDate = (dateStr) => {
+    if (!dateStr) return "";
+    return dateStr.split('T')[0];
+  };
+
+  // Filter: Compare strings strictly (e.g., "2023-10-25" === "2023-10-25")
+  const allTodaysWorkouts = safeSchedules.filter((s) => getScheduleDate(s.date) === todayStr);
+  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted) || allTodaysWorkouts[0];
+
   const upcomingSchedules = safeSchedules
-    .filter(s => {
-        if (!s.date) return false;
-        return s.date.split('T')[0] > todayStr;
-    })
+    .filter(s => getScheduleDate(s.date) > todayStr)
     .sort((a,b) => new Date(a.date) - new Date(b.date))
     .slice(0, 5);
 
@@ -231,7 +225,6 @@ const Dashboard = () => {
 
       {/* CHARTS */}
       <div className="charts-grid" style={{ marginBottom: "40px", alignItems: "stretch" }}>
-        {/* ✅ FIX: Removed extra card wrappers. The components themselves are cards. */}
         <WorkoutChart schedules={safeSchedules} />
         <WorkoutPieChart schedules={safeSchedules} />
       </div>
