@@ -28,10 +28,10 @@ const Dashboard = () => {
     try {
       const timestamp = new Date().getTime(); // Unique number
       
-      const workoutRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts?t=${timestamp}`, config);
+      const workoutRes = await axios.get(`/api/workouts?t=${timestamp}`, config);
       setWorkouts(Array.isArray(workoutRes.data) ? workoutRes.data : []);
 
-      const scheduleRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts/schedule?t=${timestamp}`, config);
+      const scheduleRes = await axios.get(`/api/workouts/schedule?t=${timestamp}`, config);
       setSchedules(Array.isArray(scheduleRes.data) ? scheduleRes.data : []);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -54,7 +54,7 @@ const Dashboard = () => {
       setSchedules((prev) =>
         prev.map((s) => (s._id === scheduleId ? { ...s, isCompleted: true } : s))
       );
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, {}, config);
+      await axios.put(`/api/workouts/schedule/${scheduleId}`, {}, config);
       await fetchData(); 
     } catch (err) {
       console.error("Error updating status:", err);
@@ -65,7 +65,7 @@ const Dashboard = () => {
   const handleDelete = async (scheduleId) => {
     if (!window.confirm("Delete this schedule?")) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, config);
+      await axios.delete(`/api/workouts/schedule/${scheduleId}`, config);
       await fetchData();
     } catch (err) {
       console.error("Failed to delete schedule", err);
