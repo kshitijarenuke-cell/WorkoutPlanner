@@ -134,7 +134,7 @@ const Dashboard = () => {
   // ✅ Safety check: Ensure schedules is an array before filtering
   const safeSchedules = Array.isArray(schedules) ? schedules : [];
   const allTodaysWorkouts = safeSchedules.filter((s) => s.date.startsWith(todayStr));
-  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted) || allTodaysWorkouts[0];
+  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted && !s.completed) || allTodaysWorkouts[0];
 
   return (
     <div className="container" style={{ paddingBottom: "100px" }}>
@@ -186,7 +186,7 @@ const Dashboard = () => {
         
         {todaysWorkout ? (
           // IF WORKOUT EXISTS
-          todaysWorkout.isCompleted ? (
+          (todaysWorkout.isCompleted || todaysWorkout.completed) ? (
             <div style={{ background: "#D1FAE5", padding: "20px", borderRadius: "12px", textAlign: "center", fontWeight: "bold", color: "#065F46" }}>
               ✅ Workout Completed!
             </div>

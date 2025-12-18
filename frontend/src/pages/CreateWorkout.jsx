@@ -7,9 +7,17 @@ import { getDailyMealPlan } from "../utils/mealGenerator";
 const CreateWorkout = () => {
   const navigate = useNavigate();
   
+  // Helper to get local date YYYY-MM-DD
+  const getLocalDateString = () => {
+    const date = new Date();
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60000);
+    return localDate.toISOString().split("T")[0];
+  };
+
   const [name, setName] = useState("");
   const [type, setType] = useState("Strength");
-  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [scheduleDate, setScheduleDate] = useState(getLocalDateString());
   const [exercises, setExercises] = useState([{ name: "", sets: "", reps: "" }]);
   
   // Autocomplete States

@@ -44,7 +44,7 @@ const WorkoutChart = ({ schedules }) => {
       
       {/* The Container with strict height */}
       <div style={{ flex: 1, width: "100%", minHeight: "200px" }}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="99%" height="100%">
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis 

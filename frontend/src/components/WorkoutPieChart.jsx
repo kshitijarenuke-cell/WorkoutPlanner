@@ -33,25 +33,27 @@ const WorkoutPieChart = ({ schedules }) => {
       </p>
 
       {data.length > 0 ? (
-        <ResponsiveContainer width="100%" height="80%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60} // Makes it a "Donut" chart (looks modern)
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend verticalAlign="bottom" height={36}/>
-          </PieChart>
-        </ResponsiveContainer>
+        <div style={{ width: "100%", height: "80%" }}>
+          <ResponsiveContainer width="99%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={60} // Makes it a "Donut" chart (looks modern)
+                outerRadius={80}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend verticalAlign="bottom" height={36}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       ) : (
         <p style={{ textAlign: "center", marginTop: "50px", color: "#999" }}>
           No completed workouts yet.
