@@ -22,17 +22,21 @@ const Dashboard = () => {
   const token = user ? user.token : null;
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
-  // 1. FETCH DATA (Added timestamp `?t=` to force fresh data every time)
+  // 1. FETCH DATA
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
-      const timestamp = new Date().getTime(); // Unique number
-      
-      const workoutRes = await axios.get(`/api/workouts?t=${timestamp}`, config);
+      const timestamp = new Date().getTime(); 
+      // Fetch Workouts
+      const workoutRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts?t=${timestamp}`, config);
       setWorkouts(Array.isArray(workoutRes.data) ? workoutRes.data : []);
 
-      const scheduleRes = await axios.get(`/api/workouts/schedule?t=${timestamp}`, config);
+      // Fetch Schedules
+      const scheduleRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/workouts/schedule?t=${timestamp}`, config);
       setSchedules(Array.isArray(scheduleRes.data) ? scheduleRes.data : []);
+      
+      // DEBUG: Log what we received to the browser console (F12)
+      console.log("Raw Schedules from DB:", scheduleRes.data);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setWorkouts([]);
@@ -54,7 +58,7 @@ const Dashboard = () => {
       setSchedules((prev) =>
         prev.map((s) => (s._id === scheduleId ? { ...s, isCompleted: true } : s))
       );
-      await axios.put(`/api/workouts/schedule/${scheduleId}`, {}, config);
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, {}, config);
       await fetchData(); 
     } catch (err) {
       console.error("Error updating status:", err);
@@ -65,7 +69,7 @@ const Dashboard = () => {
   const handleDelete = async (scheduleId) => {
     if (!window.confirm("Delete this schedule?")) return;
     try {
-      await axios.delete(`/api/workouts/schedule/${scheduleId}`, config);
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/workouts/schedule/${scheduleId}`, config);
       await fetchData();
     } catch (err) {
       console.error("Failed to delete schedule", err);
@@ -112,31 +116,46 @@ const Dashboard = () => {
 
   const myBadges = calculateBadges();
   
-  // 4. DATE LOGIC FIX
+  // ---------------------------------------------------------
+  // 4. STRICT DATE MATCHING (THE FIX)
+  // ---------------------------------------------------------
+  
   const safeSchedules = Array.isArray(schedules) ? schedules : [];
   
-  // Get Local "Today" as YYYY-MM-DD
-  const getLocalToday = () => {
+  // A. Helper: Get "Today" in YYYY-MM-DD format based on YOUR computer's clock
+  const getLocalTodayDate = () => {
     const d = new Date();
-    // Adjust for timezone offset to get strictly local YYYY-MM-DD
-    const offset = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+    // Use Sweden/Canada locale as they use YYYY-MM-DD standard, preventing format errors
+    return d.toLocaleDateString('en-CA'); 
+  };
+  
+  // B. Helper: Convert Database UTC string (e.g., 2023-12-19T00:00:00Z) to YOUR Local YYYY-MM-DD
+  const formatDbDateToLocal = (isoString) => {
+    if (!isoString) return "";
+    const d = new Date(isoString);
+    return d.toLocaleDateString('en-CA');
   };
 
-  const todayStr = getLocalToday();
+  const todayStr = getLocalTodayDate();
 
-  // Helper to safely extract YYYY-MM-DD from schedule date
-  const getScheduleDate = (dateStr) => {
-    if (!dateStr) return "";
-    return dateStr.split('T')[0];
-  };
+  console.log("Today is (Local):", todayStr);
 
-  // Filter: Compare strings strictly (e.g., "2023-10-25" === "2023-10-25")
-  const allTodaysWorkouts = safeSchedules.filter((s) => getScheduleDate(s.date) === todayStr);
+  // C. Filter for TODAY
+  const allTodaysWorkouts = safeSchedules.filter((s) => {
+    const scheduleLocal = formatDbDateToLocal(s.date);
+    // Debug logic: helps you see if dates are mismatching in console
+    if (scheduleLocal === todayStr) return true;
+    return false;
+  });
+
   const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted) || allTodaysWorkouts[0];
 
+  // D. Filter for UPCOMING (Strictly Greater Than Today)
   const upcomingSchedules = safeSchedules
-    .filter(s => getScheduleDate(s.date) > todayStr)
+    .filter(s => {
+        const scheduleLocal = formatDbDateToLocal(s.date);
+        return scheduleLocal > todayStr;
+    })
     .sort((a,b) => new Date(a.date) - new Date(b.date))
     .slice(0, 5);
 
@@ -144,9 +163,15 @@ const Dashboard = () => {
     <div className="container" style={{ paddingBottom: "100px" }}>
       
       {/* HEADER */}
-      <div style={{ marginBottom: "30px" }}>
-        <h1>Welcome back, {user?.name?.split(" ")[0] || ''}!</h1>
-        <p style={{ color: "#6B7280" }}>Here is your daily activity summary.</p>
+      <div style={{ marginBottom: "30px", display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+            <h1>Welcome back, {user?.name?.split(" ")[0] || ''}!</h1>
+            <p style={{ color: "#6B7280" }}>Here is your daily activity summary.</p>
+        </div>
+        {/* Added a Refresh button to manually pull new data if auto-fetch fails */}
+        <button onClick={fetchData} style={{ padding: "8px 16px", background: "white", border: "1px solid #ddd", borderRadius: "8px", cursor: "pointer" }}>
+            🔄 Refresh
+        </button>
       </div>
 
       {/* STATS */}
