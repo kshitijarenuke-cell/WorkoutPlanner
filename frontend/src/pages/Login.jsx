@@ -21,7 +21,6 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Assuming 'login' function in AuthContext already uses VITE_API_URL internally
       const userData = await login(email, password);
       await checkOnboarding(userData);
     } catch (err) {
@@ -35,8 +34,6 @@ const Login = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      // ✅ FIX: Added `${import.meta.env.VITE_API_URL}` to direct traffic to the Backend
-      // This prevents the 404 error by pointing to https://workoutplanner-backend.onrender.com
       const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/users/google-login`, {
         token: credentialResponse.credential,
       });
@@ -44,7 +41,6 @@ const Login = () => {
       const userData = res.data;
       localStorage.setItem("user", JSON.stringify(userData));
       
-      // Update AuthContext so the app immediately knows the user
       if (typeof setUser === "function") setUser(userData);
       
       await checkOnboarding(userData);
@@ -58,7 +54,6 @@ const Login = () => {
   };
 
   const checkOnboarding = async (user) => {
-    // Only route to onboarding for newly created accounts
     if (user?.isNewUser) {
       navigate("/onboarding");
     } else {
@@ -108,7 +103,6 @@ const Login = () => {
             />
           </div>
           
-          {/* PASSWORD INPUT WITH PROFESSIONAL ICONS */}
           <div className="input-group">
             <span className="input-icon">🔒</span>
             <input 
@@ -135,13 +129,11 @@ const Login = () => {
               }}
             >
               {showPassword ? (
-                // EYE OFF ICON (Hidden)
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                   <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>
               ) : (
-                // EYE ICON (Visible)
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                   <circle cx="12" cy="12" r="3"></circle>
@@ -153,7 +145,19 @@ const Login = () => {
           <button 
             type="submit" 
             disabled={loading}
-            style={{ width: "100%", padding: "14px", fontSize: "1rem", marginTop: "10px" }}
+            style={{ 
+              width: "100%", 
+              padding: "14px", 
+              fontSize: "1rem", 
+              marginTop: "10px",
+              // LOADING STYLE FIX:
+              background: loading ? "#9CA3AF" : "var(--primary)", 
+              color: "white", 
+              border: "none", 
+              borderRadius: "6px",
+              cursor: loading ? "not-allowed" : "pointer",
+              transition: "background 0.3s ease"
+            }}
           >
             {loading ? "Logging in..." : "Sign In"}
           </button>
