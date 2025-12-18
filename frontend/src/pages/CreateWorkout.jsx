@@ -7,12 +7,11 @@ import { getDailyMealPlan } from "../utils/mealGenerator";
 const CreateWorkout = () => {
   const navigate = useNavigate();
   
-  // Helper to get local date YYYY-MM-DD
+  // Helper: Get today's date as YYYY-MM-DD string
   const getLocalDateString = () => {
     const date = new Date();
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - offset * 60000);
-    return localDate.toISOString().split("T")[0];
+    // Use Canada locale because it adheres to YYYY-MM-DD standard strictly
+    return date.toLocaleDateString('en-CA');
   };
 
   const [name, setName] = useState("");
@@ -56,8 +55,6 @@ const CreateWorkout = () => {
     if (workoutTemplates[suggestion]) {
       if (window.confirm(`Auto-fill exercises for ${suggestion}?`)) {
         setExercises(workoutTemplates[suggestion].map(ex => ({ ...ex })));
-        
-        // Smart Type Selection
         if(suggestion.includes("HIIT") || suggestion.includes("Cardio")) setType("Cardio");
         else setType("Strength");
       }
@@ -93,6 +90,7 @@ const CreateWorkout = () => {
     setExercises([...exercises, { name: "", sets: "", reps: "" }]);
   };
 
+  // --- 3. SUBMIT (FIXED LINKS & DATE LOGIC) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     const user = JSON.parse(localStorage.getItem("user"));
@@ -101,19 +99,32 @@ const CreateWorkout = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       
-      const res = await axios.post("/api/workouts", { name, type, exercises }, config);
+      // FIX 1: Use the full API URL (import.meta.env.VITE_API_URL)
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/workouts`, 
+        { name, type, exercises }, 
+        config
+      );
       const newWorkoutId = res.data._id;
 
-      await axios.post("/api/workouts/schedule", {
+      // FIX 2: Append "Noon UTC" to the date to prevent timezone shifting
+      // This ensures the date stays "Dec 18" in both USA and India.
+      const safeDatePayload = `${scheduleDate}T12:00:00.000Z`;
+
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/workouts/schedule`, 
+        {
           workoutId: newWorkoutId,
-          date: scheduleDate
-      }, config);
+          date: safeDatePayload 
+        }, 
+        config
+      );
 
       alert("Workout Created & Scheduled!");
       navigate("/dashboard");
     } catch (err) {
-      console.error(err);
-      alert("Error creating workout");
+      console.error("Save Error:", err);
+      alert("Error creating workout. Check console for details.");
     }
   };
 
@@ -123,7 +134,7 @@ const CreateWorkout = () => {
     top: "100%", 
     left: 0, 
     width: "100%", 
-    background: "white", // White background
+    background: "white", 
     border: "1px solid #ddd", 
     zIndex: 10, 
     listStyle: "none", 
@@ -133,12 +144,11 @@ const CreateWorkout = () => {
     boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
   };
 
-  // FIXED: Force text color to BLACK so it shows on white background
   const itemStyle = { 
     padding: "12px", 
     cursor: "pointer", 
     borderBottom: "1px solid #eee",
-    color: "#000000", // <--- BLACK TEXT
+    color: "#000000",
     fontSize: "0.95rem",
     textAlign: "left"
   };
@@ -148,7 +158,7 @@ const CreateWorkout = () => {
       <h2 style={{ color: "#3B82F6" }}>Create & Schedule Routine</h2>
       
       <form onSubmit={handleSubmit} autoComplete="off">
-        {/* Routine Name Input with Autocomplete */}
+        {/* Routine Name Input */}
         <div style={{ position: "relative", marginBottom: "15px" }}>
           <label>Routine Name:</label>
           <input 
@@ -202,7 +212,6 @@ const CreateWorkout = () => {
             <div style={{ flex: 2 }}>
               <input type="text" placeholder="Exercise" value={ex.name} onChange={(e) => handleExerciseChange(i, "name", e.target.value)} required autoComplete="off" style={{ width: "100%", padding: "10px" }} />
               
-              {/* Exercise Dropdown */}
               {activeExerciseIndex === i && exerciseSuggestions.length > 0 && (
                 <ul style={{ ...dropdownStyle, top: "45px" }}>
                   {exerciseSuggestions.map((s, j) => (
@@ -226,7 +235,6 @@ const CreateWorkout = () => {
 
         <button type="button" onClick={addExerciseField} style={{ background: "#10B981", margin: "10px 0", color: "white", padding: "10px", border: "none", borderRadius: "5px", cursor: "pointer" }}>+ Add Another Exercise</button>
         
-        {/* Diet Display */}
         {todaysDiet && (
           <div style={{ marginTop: "20px", marginBottom: "20px", padding: "20px", background: "#F3F4F6", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
             <h3 style={{ marginTop: 0, color: "#4B5563", fontSize: "1.2rem" }}>🥗 Daily Fuel: {todaysDiet.goal}</h3>
