@@ -118,25 +118,31 @@ const Dashboard = () => {
   const myBadges = calculateBadges();
   
   // 5. DATE HELPER (Fixes "Today" not showing issue)
-  const isSameDay = (d1, d2) => {
-    const date1 = new Date(d1);
-    const date2 = new Date(d2);
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    );
+  const getTodayString = () => {
+    const date = new Date();
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60000);
+    return localDate.toISOString().split("T")[0];
   };
+
+  const todayStr = getTodayString();
 
   const safeSchedules = Array.isArray(schedules) ? schedules : [];
   
-  // Find today's workout using the robust isSameDay helper
-  const allTodaysWorkouts = safeSchedules.filter((s) => isSameDay(s.date, new Date()));
-  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted) || allTodaysWorkouts[0];
+  // Find today's workout using string comparison (YYYY-MM-DD)
+  // This avoids timezone shifts causing "off by one day" errors
+  const allTodaysWorkouts = safeSchedules.filter((s) => {
+    if (!s.date) return false;
+    return s.date.split('T')[0] === todayStr;
+  });
+  const todaysWorkout = allTodaysWorkouts.find((s) => !s.isCompleted && !s.completed) || allTodaysWorkouts[0];
 
-  // Helper for upcoming (Simple date comparison works for future dates)
+  // Helper for upcoming (Strictly future dates)
   const upcomingSchedules = safeSchedules
-    .filter(s => new Date(s.date) > new Date())
+    .filter(s => {
+        if (!s.date) return false;
+        return s.date.split('T')[0] > todayStr;
+    })
     .sort((a,b) => new Date(a.date) - new Date(b.date))
     .slice(0, 5);
 
@@ -225,20 +231,9 @@ const Dashboard = () => {
 
       {/* CHARTS */}
       <div className="charts-grid" style={{ marginBottom: "40px", alignItems: "stretch" }}>
-        {/* ✅ FIX: Wrap charts in card-like containers with explicitly defined height to prevent crashes */}
-        <div className="card" style={{ padding: "20px", borderRadius: "16px", minHeight: "350px" }}>
-          <h3 style={{marginBottom: "20px"}}>Workout Frequency</h3>
-          <div style={{ height: "300px", width: "100%" }}>
-            <WorkoutChart schedules={safeSchedules} />
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "20px", borderRadius: "16px", minHeight: "350px" }}>
-          <h3 style={{marginBottom: "20px"}}>Workout Types</h3>
-           <div style={{ height: "300px", width: "100%" }}>
-            <WorkoutPieChart schedules={safeSchedules} />
-          </div>
-        </div>
+        {/* ✅ FIX: Removed extra card wrappers. The components themselves are cards. */}
+        <WorkoutChart schedules={safeSchedules} />
+        <WorkoutPieChart schedules={safeSchedules} />
       </div>
 
       {/* UPCOMING */}
