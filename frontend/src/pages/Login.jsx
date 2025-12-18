@@ -34,9 +34,16 @@ const Login = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/users/google-login`, {
+      // --- FIX: Define API URL with a Fallback ---
+      // This checks the .env file first. If undefined, it uses localhost:5001
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
+      console.log("Using Backend URL for Google Login:", apiUrl); 
+
+      const res = await axios.post(`${apiUrl}/api/users/google-login`, {
         token: credentialResponse.credential,
       });
+      // -------------------------------------------
 
       const userData = res.data;
       localStorage.setItem("user", JSON.stringify(userData));
@@ -47,7 +54,9 @@ const Login = () => {
 
     } catch (err) {
       console.error("Google Login Backend Error", err);
-      setError("Google Login failed. Please try again.");
+      // Optional: Show more specific error if backend sends one
+      const msg = err.response?.data?.message || "Google Login failed. Please try again.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
