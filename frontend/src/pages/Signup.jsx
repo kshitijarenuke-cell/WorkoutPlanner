@@ -52,7 +52,8 @@ const Signup = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4 }}
         className="card" 
-        style={{ width: "100%", maxWidth: "420px", padding: "40px", borderTop: "5px solid var(--accent)" }} 
+        // --- CHANGED BORDER COLOR TO PRIMARY ---
+        style={{ width: "100%", maxWidth: "420px", padding: "40px", borderTop: "5px solid var(--primary)" }} 
       >
         
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
@@ -141,8 +142,8 @@ const Signup = () => {
               padding: "14px", 
               fontSize: "1rem", 
               marginTop: "10px", 
-              // LOADING STYLE FIX:
-              background: loading ? "#9CA3AF" : "var(--accent)", 
+              // --- CHANGED FROM var(--accent) TO var(--primary) ---
+              background: loading ? "#9CA3AF" : "var(--primary)", 
               color: "white", 
               border: "none", 
               borderRadius: "6px",

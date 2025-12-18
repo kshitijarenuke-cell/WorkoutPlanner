@@ -168,10 +168,7 @@ const Dashboard = () => {
             <h1>Welcome back, {user?.name?.split(" ")[0] || ''}!</h1>
             <p style={{ color: "#6B7280" }}>Here is your daily activity summary.</p>
         </div>
-        {/* Added a Refresh button to manually pull new data if auto-fetch fails */}
-        <button onClick={fetchData} style={{ padding: "8px 16px", background: "white", border: "1px solid #ddd", borderRadius: "8px", cursor: "pointer" }}>
-            🔄 Refresh
-        </button>
+       
       </div>
 
       {/* STATS */}
